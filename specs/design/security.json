@@ -1,0 +1,47 @@
+{
+  "version": 1,
+  "coldStartRole": "HR Coordinator",
+  "publicComponents": [],
+  "roles": [
+    {
+      "name": "HR Coordinator",
+      "description": "Adds new hires, manages the shared onboarding template, and views cross-team onboarding progress.",
+      "stories": [1, 2, 3, 4, 7, 10],
+      "grantedBy": "first sign-in",
+      "permissions": [
+        { "component": "onboarding-api", "actions": ["create new hire", "manage template tasks", "read all tasks", "complete HR tasks"] },
+        { "component": "onboarding-webapp", "screens": ["New Hires", "New Hire Detail", "Onboarding Template"] }
+      ]
+    },
+    {
+      "name": "IT Staff",
+      "description": "Works the IT onboarding task queue across all new hires and completes IT tasks.",
+      "stories": [5, 8, 10],
+      "grantedBy": "HR Coordinator",
+      "permissions": [
+        { "component": "onboarding-api", "actions": ["read IT tasks", "complete IT tasks"] },
+        { "component": "onboarding-webapp", "screens": ["IT Task Queue"] }
+      ]
+    },
+    {
+      "name": "Facilities Staff",
+      "description": "Works the Facilities onboarding task queue across all new hires and completes Facilities tasks.",
+      "stories": [6, 9, 10],
+      "grantedBy": "HR Coordinator",
+      "permissions": [
+        { "component": "onboarding-api", "actions": ["read Facilities tasks", "complete Facilities tasks"] },
+        { "component": "onboarding-webapp", "screens": ["Facilities Task Queue"] }
+      ]
+    }
+  ],
+  "testUsers": [
+    { "username": "test-hr-coordinator", "role": "HR Coordinator" },
+    { "username": "test-it-staff", "role": "IT Staff" },
+    { "username": "test-facilities-staff", "role": "Facilities Staff" }
+  ],
+  "thunder": {
+    "name": "Track Each Hire",
+    "type": "browser",
+    "scopes": "openid profile email group ou"
+  }
+}

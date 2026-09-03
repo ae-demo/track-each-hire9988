@@ -1,0 +1,362 @@
+openapi: 3.0.3
+info:
+  title: Onboarding API
+  version: 0.1.0
+  description: Tracks new hires, the shared onboarding task template, and generated onboarding tasks across HR, IT, and Facilities.
+servers:
+  - url: /
+
+paths:
+  /new-hires:
+    get:
+      operationId: listNewHires
+      summary: List new hires
+      parameters:
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Offset'
+      responses:
+        '200':
+          description: Page of new hires
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [count, data]
+                properties:
+                  count: { type: integer, description: total matching items }
+                  next: { type: string, nullable: true, description: relative URI of the next page }
+                  previous: { type: string, nullable: true, description: relative URI of the previous page }
+                  data:
+                    type: array
+                    items: { $ref: '#/components/schemas/NewHire' }
+        '401':
+          description: Missing or invalid token
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+    post:
+      operationId: addNewHire
+      summary: Add a new hire and generate their onboarding checklist from the shared template
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/NewNewHire' }
+      responses:
+        '201':
+          description: New hire created with generated onboarding tasks
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/NewHire' }
+        '400':
+          description: Invalid new hire payload
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '401':
+          description: Missing or invalid token
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
+  /new-hires/{newHireId}:
+    parameters:
+      - $ref: '#/components/parameters/NewHireId'
+    get:
+      operationId: getNewHire
+      summary: Get a new hire and their onboarding progress across HR, IT, and Facilities
+      responses:
+        '200':
+          description: New hire detail
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/NewHire' }
+        '404':
+          description: New hire not found
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '401':
+          description: Missing or invalid token
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
+  /onboarding-tasks:
+    get:
+      operationId: listOnboardingTasks
+      summary: List onboarding tasks, optionally filtered by team, new hire, or overdue status
+      parameters:
+        - name: team
+          in: query
+          description: Filter to one team's tasks
+          schema: { $ref: '#/components/schemas/Team' }
+        - name: newHireId
+          in: query
+          description: Filter to one new hire's tasks
+          schema: { type: string }
+        - name: overdue
+          in: query
+          description: When true, return only pending tasks past their due date
+          schema: { type: boolean }
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Offset'
+      responses:
+        '200':
+          description: Page of onboarding tasks
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [count, data]
+                properties:
+                  count: { type: integer, description: total matching items }
+                  next: { type: string, nullable: true, description: relative URI of the next page }
+                  previous: { type: string, nullable: true, description: relative URI of the previous page }
+                  data:
+                    type: array
+                    items: { $ref: '#/components/schemas/OnboardingTask' }
+        '401':
+          description: Missing or invalid token
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
+  /onboarding-tasks/{taskId}/complete:
+    parameters:
+      - $ref: '#/components/parameters/TaskId'
+    post:
+      operationId: completeOnboardingTask
+      summary: Mark an onboarding task complete (only the task's own team may complete it)
+      responses:
+        '200':
+          description: Task marked complete
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/OnboardingTask' }
+        '403':
+          description: Caller's team does not own this task
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '404':
+          description: Task not found
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '401':
+          description: Missing or invalid token
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
+  /template-tasks:
+    get:
+      operationId: listTemplateTasks
+      summary: List the shared onboarding task template
+      responses:
+        '200':
+          description: Template tasks
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/TemplateTask' }
+        '401':
+          description: Missing or invalid token
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+    post:
+      operationId: addTemplateTask
+      summary: Add a task to the shared onboarding template
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/NewTemplateTask' }
+      responses:
+        '201':
+          description: Template task created
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/TemplateTask' }
+        '400':
+          description: Invalid template task payload
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '401':
+          description: Missing or invalid token
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '403':
+          description: Caller is not an HR Coordinator
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
+  /template-tasks/{templateTaskId}:
+    parameters:
+      - $ref: '#/components/parameters/TemplateTaskId'
+    put:
+      operationId: updateTemplateTask
+      summary: Edit a shared onboarding template task
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/NewTemplateTask' }
+      responses:
+        '200':
+          description: Template task updated
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/TemplateTask' }
+        '400':
+          description: Invalid template task payload
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '401':
+          description: Missing or invalid token
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '403':
+          description: Caller is not an HR Coordinator
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '404':
+          description: Template task not found
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+    delete:
+      operationId: deleteTemplateTask
+      summary: Remove a task from the shared onboarding template
+      responses:
+        '204':
+          description: Template task removed
+        '401':
+          description: Missing or invalid token
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '403':
+          description: Caller is not an HR Coordinator
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '404':
+          description: Template task not found
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
+components:
+  parameters:
+    Limit:
+      name: limit
+      in: query
+      schema: { type: integer, default: 20, maximum: 100 }
+      description: Max items to return
+    Offset:
+      name: offset
+      in: query
+      schema: { type: integer, default: 0 }
+      description: Items to skip
+    NewHireId:
+      name: newHireId
+      in: path
+      required: true
+      schema: { type: string }
+      description: New hire identifier
+    TaskId:
+      name: taskId
+      in: path
+      required: true
+      schema: { type: string }
+      description: Onboarding task identifier
+    TemplateTaskId:
+      name: templateTaskId
+      in: path
+      required: true
+      schema: { type: string }
+      description: Template task identifier
+
+  schemas:
+    Team:
+      type: string
+      enum: [HR, IT, Facilities]
+      description: The team that owns a task
+
+    NewNewHire:
+      type: object
+      required: [fullName, role, startDate]
+      properties:
+        fullName: { type: string }
+        role: { type: string }
+        startDate: { type: string, format: date }
+
+    NewHire:
+      type: object
+      required: [id, fullName, role, startDate, createdAt]
+      properties:
+        id: { type: string }
+        fullName: { type: string }
+        role: { type: string }
+        startDate: { type: string, format: date }
+        createdAt: { type: string, format: date-time }
+        tasks:
+          type: array
+          items: { $ref: '#/components/schemas/OnboardingTask' }
+
+    NewTemplateTask:
+      type: object
+      required: [title, team, dueOffsetDays]
+      properties:
+        title: { type: string }
+        team: { $ref: '#/components/schemas/Team' }
+        dueOffsetDays: { type: integer, description: days after the new hire's start date }
+        sortOrder: { type: integer }
+
+    TemplateTask:
+      allOf:
+        - type: object
+          required: [id]
+          properties:
+            id: { type: string }
+        - $ref: '#/components/schemas/NewTemplateTask'
+
+    OnboardingTask:
+      type: object
+      required: [id, newHireId, templateTaskId, title, team, dueDate, status]
+      properties:
+        id: { type: string }
+        newHireId: { type: string }
+        templateTaskId: { type: string }
+        title: { type: string }
+        team: { $ref: '#/components/schemas/Team' }
+        dueDate: { type: string, format: date }
+        status: { type: string, enum: [pending, complete] }
+        overdue: { type: boolean, description: computed true when pending and dueDate is in the past }
+        completedAt: { type: string, format: date-time, nullable: true }
+        completedBy: { type: string, nullable: true }
+
+    Error:
+      type: object
+      required: [code, message]
+      properties:
+        code: { type: integer, description: HTTP or application error code }
+        message: { type: string, description: short human-readable label }
+        description: { type: string, description: detailed explanation }
+        moreInfo: { type: string, description: URI to documentation }
+
+  securitySchemes:
+    bearerAuth: { type: http, scheme: bearer, bearerFormat: JWT }
+
+security:
+  - bearerAuth: []
